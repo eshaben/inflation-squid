@@ -1,13 +1,20 @@
-type Account @entity {
-  "Account address"
-  id: ID!
-  balance: BigInt!
-  historicalBalances: [HistoricalBalance!] @derivedFrom(field: "account")
+enum AssetStatus {
+  BURNED
+  ISSUED
+  TRANSFERRED
 }
 
-type HistoricalBalance @entity {
-  id: ID!
-  account: Account!
+type Transfer @entity {
+
+  id: ID! # Transaction hash
+
+  assetId: String!
+
+  to: String
+
+  from: String
+
   balance: BigInt!
-  date: DateTime!
+
+  status: AssetStatus!
 }

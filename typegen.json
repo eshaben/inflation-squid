@@ -1,9 +1,11 @@
 {
   "outDir": "src/types",
-  "chainVersions": "kusamaVersions.json",
-  "typesBundle": "kusama",
+  "chainVersions": "moonbeamVersions.json",
+  "typesBundle": "moonbeam-types.json",
   "events": [
-    "balances.Transfer"
+    "assets.Transferred",
+    "assets.Issued",
+    "assets.Burned"
   ],
   "calls": []
 }

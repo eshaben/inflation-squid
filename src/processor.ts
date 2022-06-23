@@ -5,95 +5,58 @@ import {
   SubstrateProcessor,
 } from "@subsquid/substrate-processor";
 import { lookupArchive } from "@subsquid/archive-registry";
-import { Account, HistoricalBalance } from "./model";
-import { BalancesTransferEvent } from "./types/events";
+import { Transfer, AssetStatus } from "./model";
+import { AssetsBurnedEvent, AssetsIssuedEvent, AssetsTransferredEvent } from "./types/events";
 
-const processor = new SubstrateProcessor("kusama_balances");
+const processor = new SubstrateProcessor("moonbeam-asset-transfers");
 
 processor.setBatchSize(500);
 processor.setDataSource({
-  archive: lookupArchive("kusama")[0].url,
-  chain: "wss://kusama-rpc.polkadot.io",
+  archive: lookupArchive("moonbeam")[0].url,
+  chain: "wss://moonbeam.api.onfinality.io/public-ws",
+});
+processor.setBlockRange({from: 950000})
+
+processor.addEventHandler("assets.Transferred", async (ctx: EventHandlerContext) => {
+  const event = new AssetsTransferredEvent(ctx).asV1201;
+
+  const transferred = new Transfer();
+  transferred.id = ctx.event.id;
+  transferred.assetId = event.assetId.toString();
+  transferred.balance = ctx.event.params[3].value as bigint;
+  transferred.from = ctx.event.params[1].value as string;
+  transferred.to = ctx.event.params[2].value as string;
+  transferred.status = AssetStatus.TRANSFERRED;
+
+  await ctx.store.save(transferred);
 });
 
-processor.addEventHandler("balances.Transfer", async (ctx) => {
-  const transfer = getTransferEvent(ctx);
-  const tip = ctx.extrinsic?.tip || 0n;
-  const from = ss58.codec("kusama").encode(transfer.from);
-  const to = ss58.codec("kusama").encode(transfer.to);
+processor.addEventHandler("assets.Issued", async (ctx: EventHandlerContext) => {
+  const event = new AssetsIssuedEvent(ctx).asV1201;
 
-  const fromAcc = await getOrCreate(ctx.store, Account, from);
-  fromAcc.balance = fromAcc.balance || 0n;
-  fromAcc.balance -= transfer.amount;
-  fromAcc.balance -= tip;
-  await ctx.store.save(fromAcc);
+  const transferred = new Transfer();
+  transferred.id = ctx.event.id;
+  transferred.assetId = event.assetId.toString();
+  transferred.to = ctx.event.params[1].value as string;
+  transferred.from = "";
+  transferred.balance = ctx.event.params[2].value as bigint;
+  transferred.status = AssetStatus.ISSUED;
 
-  const toAcc = await getOrCreate(ctx.store, Account, to);
-  toAcc.balance = toAcc.balance || 0n;
-  toAcc.balance += transfer.amount;
-  await ctx.store.save(toAcc);
+  await ctx.store.save(transferred);
+});
 
-  await ctx.store.save(
-    new HistoricalBalance({
-      id: `${ctx.event.id}-to`,
-      account: fromAcc,
-      balance: fromAcc.balance,
-      date: new Date(ctx.block.timestamp),
-    })
-  );
+processor.addEventHandler("assets.Burned", async (ctx: EventHandlerContext) => {
+  const event = new AssetsBurnedEvent(ctx).asV1201;
 
-  await ctx.store.save(
-    new HistoricalBalance({
-      id: `${ctx.event.id}-from`,
-      account: toAcc,
-      balance: toAcc.balance,
-      date: new Date(ctx.block.timestamp),
-    })
-  );
+  const transferred = new Transfer();
+  transferred.id = ctx.event.id;
+  transferred.assetId = event.assetId.toString();
+  transferred.balance =  ctx.event.params[2].value as bigint;
+  transferred.from = ctx.event.params[1].value as string;
+  transferred.to = "";
+  transferred.status = AssetStatus.BURNED;
+
+  await ctx.store.save(transferred);
 });
 
 processor.run();
-
-interface TransferEvent {
-  from: Uint8Array;
-  to: Uint8Array;
-  amount: bigint;
-}
-
-function getTransferEvent(ctx: EventHandlerContext): TransferEvent {
-  const event = new BalancesTransferEvent(ctx);
-  if (event.isV1020) {
-    const [from, to, amount] = event.asV1020;
-    return { from, to, amount };
-  }
-  if (event.isV1050) {
-    const [from, to, amount] = event.asV1050;
-    return { from, to, amount };
-  }
-  if (event.isV9130) {
-    const { from, to, amount } = event.asV9130;
-    return { from, to, amount };
-  }
-  return event.asLatest;
-}
-
-async function getOrCreate<T extends { id: string }>(
-  store: Store,
-  EntityConstructor: EntityConstructor<T>,
-  id: string
-): Promise<T> {
-  let entity = await store.get<T>(EntityConstructor, {
-    where: { id },
-  });
-
-  if (entity == null) {
-    entity = new EntityConstructor();
-    entity.id = id;
-  }
-
-  return entity;
-}
-
-type EntityConstructor<T> = {
-  new (...args: any[]): T;
-};

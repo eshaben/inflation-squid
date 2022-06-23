@@ -1,64 +1,96 @@
 import assert from 'assert'
 import {EventContext, Result, deprecateLatest} from './support'
-import * as v9130 from './v9130'
+import * as v1201 from './v1201'
 
-export class BalancesTransferEvent {
+export class AssetsBurnedEvent {
   constructor(private ctx: EventContext) {
-    assert(this.ctx.event.name === 'balances.Transfer')
+    assert(this.ctx.event.name === 'assets.Burned')
   }
 
   /**
-   *  Transfer succeeded (from, to, value, fees).
+   * Some assets were destroyed.
    */
-  get isV1020(): boolean {
-    return this.ctx._chain.getEventHash('balances.Transfer') === '72e6f0d399a72f77551d560f52df25d757e0643d0192b3bc837cbd91b6f36b27'
+  get isV1201(): boolean {
+    return this.ctx._chain.getEventHash('assets.Burned') === '7b313023dcadc0790714779ac69e85195d0b94fbfc5c5b1c65234ca592e0d3f7'
   }
 
   /**
-   *  Transfer succeeded (from, to, value, fees).
+   * Some assets were destroyed.
    */
-  get asV1020(): [Uint8Array, Uint8Array, bigint, bigint] {
-    assert(this.isV1020)
-    return this.ctx._chain.decodeEvent(this.ctx.event)
-  }
-
-  /**
-   *  Transfer succeeded (from, to, value).
-   */
-  get isV1050(): boolean {
-    return this.ctx._chain.getEventHash('balances.Transfer') === 'dad2bcdca357505fa3c7832085d0db53ce6f902bd9f5b52823ee8791d351872c'
-  }
-
-  /**
-   *  Transfer succeeded (from, to, value).
-   */
-  get asV1050(): [Uint8Array, Uint8Array, bigint] {
-    assert(this.isV1050)
-    return this.ctx._chain.decodeEvent(this.ctx.event)
-  }
-
-  /**
-   * Transfer succeeded.
-   */
-  get isV9130(): boolean {
-    return this.ctx._chain.getEventHash('balances.Transfer') === '0ffdf35c495114c2d42a8bf6c241483fd5334ca0198662e14480ad040f1e3a66'
-  }
-
-  /**
-   * Transfer succeeded.
-   */
-  get asV9130(): {from: v9130.AccountId32, to: v9130.AccountId32, amount: bigint} {
-    assert(this.isV9130)
+  get asV1201(): {assetId: bigint, owner: v1201.AccountId20, balance: bigint} {
+    assert(this.isV1201)
     return this.ctx._chain.decodeEvent(this.ctx.event)
   }
 
   get isLatest(): boolean {
     deprecateLatest()
-    return this.isV9130
+    return this.isV1201
   }
 
-  get asLatest(): {from: v9130.AccountId32, to: v9130.AccountId32, amount: bigint} {
+  get asLatest(): {assetId: bigint, owner: v1201.AccountId20, balance: bigint} {
     deprecateLatest()
-    return this.asV9130
+    return this.asV1201
+  }
+}
+
+export class AssetsIssuedEvent {
+  constructor(private ctx: EventContext) {
+    assert(this.ctx.event.name === 'assets.Issued')
+  }
+
+  /**
+   * Some assets were issued.
+   */
+  get isV1201(): boolean {
+    return this.ctx._chain.getEventHash('assets.Issued') === '00b4e83fd8a2b78206f9e4f83e5841b01b15461279b6952b593fddd97bfa57f8'
+  }
+
+  /**
+   * Some assets were issued.
+   */
+  get asV1201(): {assetId: bigint, owner: v1201.AccountId20, totalSupply: bigint} {
+    assert(this.isV1201)
+    return this.ctx._chain.decodeEvent(this.ctx.event)
+  }
+
+  get isLatest(): boolean {
+    deprecateLatest()
+    return this.isV1201
+  }
+
+  get asLatest(): {assetId: bigint, owner: v1201.AccountId20, totalSupply: bigint} {
+    deprecateLatest()
+    return this.asV1201
+  }
+}
+
+export class AssetsTransferredEvent {
+  constructor(private ctx: EventContext) {
+    assert(this.ctx.event.name === 'assets.Transferred')
+  }
+
+  /**
+   * Some assets were transferred.
+   */
+  get isV1201(): boolean {
+    return this.ctx._chain.getEventHash('assets.Transferred') === 'f65815f0a2516ce398b9e72fe858b92dc308f7815d5ec2c9ca9344c57874f4c2'
+  }
+
+  /**
+   * Some assets were transferred.
+   */
+  get asV1201(): {assetId: bigint, from: v1201.AccountId20, to: v1201.AccountId20, amount: bigint} {
+    assert(this.isV1201)
+    return this.ctx._chain.decodeEvent(this.ctx.event)
+  }
+
+  get isLatest(): boolean {
+    deprecateLatest()
+    return this.isV1201
+  }
+
+  get asLatest(): {assetId: bigint, from: v1201.AccountId20, to: v1201.AccountId20, amount: bigint} {
+    deprecateLatest()
+    return this.asV1201
   }
 }
