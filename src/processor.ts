@@ -23,7 +23,7 @@ processor.addEventHandler("assets.Transferred", async (ctx: EventHandlerContext)
   const transferred = new Transfer();
   transferred.id = ctx.event.id;
   transferred.assetId = event.assetId.toString();
-  transferred.balance = ctx.event.params[3].value as bigint;
+  transferred.balance = event.amount;
   transferred.from = ctx.event.params[1].value as string;
   transferred.to = ctx.event.params[2].value as string;
   transferred.status = AssetStatus.TRANSFERRED;
@@ -39,7 +39,7 @@ processor.addEventHandler("assets.Issued", async (ctx: EventHandlerContext) => {
   transferred.assetId = event.assetId.toString();
   transferred.to = ctx.event.params[1].value as string;
   transferred.from = "";
-  transferred.balance = ctx.event.params[2].value as bigint;
+  transferred.balance = event.totalSupply;
   transferred.status = AssetStatus.ISSUED;
 
   await ctx.store.save(transferred);
@@ -51,7 +51,7 @@ processor.addEventHandler("assets.Burned", async (ctx: EventHandlerContext) => {
   const transferred = new Transfer();
   transferred.id = ctx.event.id;
   transferred.assetId = event.assetId.toString();
-  transferred.balance =  ctx.event.params[2].value as bigint;
+  transferred.balance =  event.balance;
   transferred.from = ctx.event.params[1].value as string;
   transferred.to = "";
   transferred.status = AssetStatus.BURNED;
