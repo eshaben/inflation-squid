@@ -1,11 +1,11 @@
 {
   "outDir": "src/types",
-  "chainVersions": "moonbeamVersions.json",
+  "specVersions": "https://moonbeam.archive.subsquid.io/graphql",
   "typesBundle": "moonbeam",
   "events": [
-    "assets.Transferred",
-    "assets.Issued",
-    "assets.Burned"
+    "Assets.Transferred",
+    "Assets.Issued",
+    "Assets.Burned"
   ],
   "calls": []
 }
