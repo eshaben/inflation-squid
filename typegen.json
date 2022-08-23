@@ -3,7 +3,9 @@
   "chainVersions": "moonbeamVersions.json",
   "typesBundle": "moonbeam",
   "events": [
-    "treasury.Deposit"
+    "assets.Transferred",
+    "assets.Issued",
+    "assets.Burned"
   ],
   "calls": []
 }
