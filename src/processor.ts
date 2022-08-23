@@ -1,62 +1,43 @@
-import * as ss58 from "@subsquid/ss58";
 import {
   EventHandlerContext,
-  Store,
   SubstrateProcessor,
 } from "@subsquid/substrate-processor";
 import { lookupArchive } from "@subsquid/archive-registry";
-import { Transfer, AssetStatus } from "./model";
-import { AssetsBurnedEvent, AssetsIssuedEvent, AssetsTransferredEvent } from "./types/events";
+import { TreasuryDeposit } from "./model";
+import { TreasuryDepositEvent } from "./types/events";
 
-const processor = new SubstrateProcessor("moonbeam-asset-transfers");
+const processor = new SubstrateProcessor("moonbeam-treasury-deposits");
 
 processor.setBatchSize(500);
 processor.setDataSource({
   archive: lookupArchive("moonbeam")[0].url,
   chain: "wss://moonbeam.api.onfinality.io/public-ws",
 });
-processor.setBlockRange({from: 950000})
+processor.setBlockRange({from: 1144562, to: 1557182 })
 
-processor.addEventHandler("assets.Transferred", async (ctx: EventHandlerContext) => {
-  const event = new AssetsTransferredEvent(ctx).asV1201;
+processor.addEventHandler("treasury.Deposit", async (ctx: EventHandlerContext) => {
+  const event = getDepositEvent(ctx);
 
-  const transferred = new Transfer();
-  transferred.id = ctx.event.id;
-  transferred.assetId = event.assetId.toString();
-  transferred.balance = event.amount;
-  transferred.from = ctx.event.params[1].value as string;
-  transferred.to = ctx.event.params[2].value as string;
-  transferred.status = AssetStatus.TRANSFERRED;
+  const deposit = new TreasuryDeposit();
+  deposit.id = ctx.event.id;
+  deposit.balance = event.value;
+  deposit.timestamp = new Date(ctx.event.blockTimestamp).toUTCString();
 
-  await ctx.store.save(transferred);
+  if (deposit.timestamp.includes("Jun") || deposit.timestamp.includes("Jul")) {
+    await ctx.store.save(deposit);
+  }
+
 });
 
-processor.addEventHandler("assets.Issued", async (ctx: EventHandlerContext) => {
-  const event = new AssetsIssuedEvent(ctx).asV1201;
+function getDepositEvent(ctx: EventHandlerContext) {
+  const event = new TreasuryDepositEvent(ctx);
 
-  const transferred = new Transfer();
-  transferred.id = ctx.event.id;
-  transferred.assetId = event.assetId.toString();
-  transferred.to = ctx.event.params[1].value as string;
-  transferred.from = "";
-  transferred.balance = event.totalSupply;
-  transferred.status = AssetStatus.ISSUED;
-
-  await ctx.store.save(transferred);
-});
-
-processor.addEventHandler("assets.Burned", async (ctx: EventHandlerContext) => {
-  const event = new AssetsBurnedEvent(ctx).asV1201;
-
-  const transferred = new Transfer();
-  transferred.id = ctx.event.id;
-  transferred.assetId = event.assetId.toString();
-  transferred.balance =  event.balance;
-  transferred.from = ctx.event.params[1].value as string;
-  transferred.to = "";
-  transferred.status = AssetStatus.BURNED;
-
-  await ctx.store.save(transferred);
-});
+  if (event.isV900) {
+    const deposit = event.asV900;
+    return { value: deposit };
+  } else {
+    return event.asV1300
+  }
+}
 
 processor.run();
