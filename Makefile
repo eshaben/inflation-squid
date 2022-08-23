@@ -2,24 +2,39 @@ process: migrate
 	@node -r dotenv/config lib/processor.js
 
 
-build:
-	@npm run build
-
-
 serve:
 	@npx squid-graphql-server
 
 
 migrate:
-	@npx squid-typeorm-migration apply
+	@npx sqd db:migrate
+
+
+migration:
+	@npx sqd db:create-migration Data
+
+
+build:
+	@npm run build
 
 
 codegen:
-	@npx squid-typeorm-codegen
+	@npx sqd codegen
 
 
-typegen:
+typegen: kusamaVersions.json
 	@npx squid-substrate-typegen typegen.json
+
+
+kusamaVersions.json:
+	@make explore
+
+
+explore:
+	@npx squid-substrate-metadata-explorer \
+		--chain wss://kusama-rpc.polkadot.io \
+		--archive https://kusama.indexer.gc.subsquid.io/v4/graphql \
+		--out kusamaVersions.json
 
 
 up:
@@ -30,4 +45,4 @@ down:
 	@docker-compose down
 
 
-.PHONY: build serve process migrate codegen typegen up down
+.PHONY: process serve start codegen migration migrate up down

@@ -1,6 +1,6 @@
 {
   "outDir": "src/types",
-  "specVersions": "https://moonbeam.archive.subsquid.io/graphql",
+  "chainVersions": "moonbeamVersions.json",
   "typesBundle": "moonbeam",
   "events": [
     "treasury.Deposit"

@@ -40,5 +40,4 @@ function getDepositEvent(ctx: EventHandlerContext) {
   }
 }
 
-  return assetTransfers;
-}
+processor.run();
