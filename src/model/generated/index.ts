@@ -1,2 +1,1 @@
-export * from "./transfer.model"
-export * from "./_assetStatus"
+export * from "./reward.model"

@@ -1,20 +1,53 @@
-enum AssetStatus {
-  BURNED
-  ISSUED
-  TRANSFERRED
-}
 
-type Transfer @entity {
+# type CollatorReward @entity {
 
-  id: ID! # Transaction hash
+#   id: ID!
 
-  assetId: String!
+#   balance: BigInt!
 
-  to: String
+#   inflation: BigInt!
 
-  from: String
+#   timestamp: String!
+
+#   month: Int!
+
+#   dateMonth: String!
+
+#   collator: Boolean!
+
+#   account: String!
+
+# }
+
+# type DelegatorReward @entity {
+
+#   id: ID!
+
+#   balance: BigInt!
+
+#   inflation: BigInt!
+
+#   timestamp: String!
+
+#   month: Int!
+
+#   dateMonth: String!
+
+#   account: String!
+
+# }
+
+
+type Reward @entity {
+
+  id: ID!
 
   balance: BigInt!
 
-  status: AssetStatus!
+  timestamp: BigInt!
+
+  dateMonth: String!
+
+  account: String!
+
 }

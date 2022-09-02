@@ -1,96 +1,75 @@
 import assert from 'assert'
-import {EventContext, Result, deprecateLatest} from './support'
-import * as v1201 from './v1201'
+import {Chain, ChainContext, EventContext, Event, Result} from './support'
 
-export class AssetsBurnedEvent {
-  constructor(private ctx: EventContext) {
-    assert(this.ctx.event.name === 'assets.Burned')
+export class ParachainStakingDelegatorDueRewardEvent {
+  private readonly _chain: Chain
+  private readonly event: Event
+
+  constructor(ctx: EventContext)
+  constructor(ctx: ChainContext, event: Event)
+  constructor(ctx: EventContext, event?: Event) {
+    event = event || ctx.event
+    assert(event.name === 'ParachainStaking.DelegatorDueReward')
+    this._chain = ctx._chain
+    this.event = event
   }
 
   /**
-   * Some assets were destroyed.
+   * Delegator, Collator, Due reward (as per counted delegation for collator)
    */
-  get isV1201(): boolean {
-    return this.ctx._chain.getEventHash('assets.Burned') === '7b313023dcadc0790714779ac69e85195d0b94fbfc5c5b1c65234ca592e0d3f7'
+  get isV1001(): boolean {
+    return this._chain.getEventHash('ParachainStaking.DelegatorDueReward') === 'dfcae516f053c47e7cb49e0718f01587efcb64cea4e3baf4c6973a29891f7841'
   }
 
   /**
-   * Some assets were destroyed.
+   * Delegator, Collator, Due reward (as per counted delegation for collator)
    */
-  get asV1201(): {assetId: bigint, owner: v1201.AccountId20, balance: bigint} {
-    assert(this.isV1201)
-    return this.ctx._chain.decodeEvent(this.ctx.event)
-  }
-
-  get isLatest(): boolean {
-    deprecateLatest()
-    return this.isV1201
-  }
-
-  get asLatest(): {assetId: bigint, owner: v1201.AccountId20, balance: bigint} {
-    deprecateLatest()
-    return this.asV1201
+  get asV1001(): [Uint8Array, Uint8Array, bigint] {
+    assert(this.isV1001)
+    return this._chain.decodeEvent(this.event)
   }
 }
 
-export class AssetsIssuedEvent {
-  constructor(private ctx: EventContext) {
-    assert(this.ctx.event.name === 'assets.Issued')
+export class ParachainStakingRewardedEvent {
+  private readonly _chain: Chain
+  private readonly event: Event
+
+  constructor(ctx: EventContext)
+  constructor(ctx: ChainContext, event: Event)
+  constructor(ctx: EventContext, event?: Event) {
+    event = event || ctx.event
+    assert(event.name === 'ParachainStaking.Rewarded')
+    this._chain = ctx._chain
+    this.event = event
   }
 
   /**
-   * Some assets were issued.
+   * Paid the account (nominator or collator) the balance as liquid rewards
    */
-  get isV1201(): boolean {
-    return this.ctx._chain.getEventHash('assets.Issued') === '00b4e83fd8a2b78206f9e4f83e5841b01b15461279b6952b593fddd97bfa57f8'
+  get isV900(): boolean {
+    return this._chain.getEventHash('ParachainStaking.Rewarded') === 'e4f02aa7cee015102b6cbc171f5d7e84370e60deba2166a27195187adde0407f'
   }
 
   /**
-   * Some assets were issued.
+   * Paid the account (nominator or collator) the balance as liquid rewards
    */
-  get asV1201(): {assetId: bigint, owner: v1201.AccountId20, totalSupply: bigint} {
-    assert(this.isV1201)
-    return this.ctx._chain.decodeEvent(this.ctx.event)
-  }
-
-  get isLatest(): boolean {
-    deprecateLatest()
-    return this.isV1201
-  }
-
-  get asLatest(): {assetId: bigint, owner: v1201.AccountId20, totalSupply: bigint} {
-    deprecateLatest()
-    return this.asV1201
-  }
-}
-
-export class AssetsTransferredEvent {
-  constructor(private ctx: EventContext) {
-    assert(this.ctx.event.name === 'assets.Transferred')
+  get asV900(): [Uint8Array, bigint] {
+    assert(this.isV900)
+    return this._chain.decodeEvent(this.event)
   }
 
   /**
-   * Some assets were transferred.
+   * Paid the account (delegator or collator) the balance as liquid rewards.
    */
-  get isV1201(): boolean {
-    return this.ctx._chain.getEventHash('assets.Transferred') === 'f65815f0a2516ce398b9e72fe858b92dc308f7815d5ec2c9ca9344c57874f4c2'
+  get isV1300(): boolean {
+    return this._chain.getEventHash('ParachainStaking.Rewarded') === '44a7364018ebad92746e4ca7c7c23d24d5da43cda2e63a90c665b522994ef1e2'
   }
 
   /**
-   * Some assets were transferred.
+   * Paid the account (delegator or collator) the balance as liquid rewards.
    */
-  get asV1201(): {assetId: bigint, from: v1201.AccountId20, to: v1201.AccountId20, amount: bigint} {
-    assert(this.isV1201)
-    return this.ctx._chain.decodeEvent(this.ctx.event)
-  }
-
-  get isLatest(): boolean {
-    deprecateLatest()
-    return this.isV1201
-  }
-
-  get asLatest(): {assetId: bigint, from: v1201.AccountId20, to: v1201.AccountId20, amount: bigint} {
-    deprecateLatest()
-    return this.asV1201
+  get asV1300(): {account: Uint8Array, rewards: bigint} {
+    assert(this.isV1300)
+    return this._chain.decodeEvent(this.event)
   }
 }

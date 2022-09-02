@@ -1,62 +1,71 @@
-import * as ss58 from "@subsquid/ss58";
+import { Store, TypeormDatabase } from "@subsquid/typeorm-store";
 import {
-  EventHandlerContext,
-  Store,
-  SubstrateProcessor,
+  BatchContext,
+  BatchProcessorItem,
+  SubstrateBatchProcessor,
+  toHex,
 } from "@subsquid/substrate-processor";
 import { lookupArchive } from "@subsquid/archive-registry";
-import { Transfer, AssetStatus } from "./model";
-import { AssetsBurnedEvent, AssetsIssuedEvent, AssetsTransferredEvent } from "./types/events";
+import { Reward } from "./model";
+import {
+  ParachainStakingRewardedEvent,
+} from "./types/events";
 
-const processor = new SubstrateProcessor("moonbeam-asset-transfers");
+const processor = new SubstrateBatchProcessor()
+  .setBatchSize(500)
+  .setDataSource({
+    archive: lookupArchive("moonbeam", { release: "FireSquid" }),
+  })
+  .addEvent("ParachainStaking.Rewarded")
+  .addEvent("ParachainStaking.DelegatorDueReward")
 
-processor.setBatchSize(500);
-processor.setDataSource({
-  archive: lookupArchive("moonbeam")[0].url,
-  chain: "wss://moonbeam.api.onfinality.io/public-ws",
-});
-processor.setBlockRange({from: 950000})
+processor.setBlockRange({ from: 171060, to: 1557181 });
 
-processor.addEventHandler("assets.Transferred", async (ctx: EventHandlerContext) => {
-  const event = new AssetsTransferredEvent(ctx).asV1201;
-
-  const transferred = new Transfer();
-  transferred.id = ctx.event.id;
-  transferred.assetId = event.assetId.toString();
-  transferred.balance = event.amount;
-  transferred.from = ctx.event.params[1].value as string;
-  transferred.to = ctx.event.params[2].value as string;
-  transferred.status = AssetStatus.TRANSFERRED;
-
-  await ctx.store.save(transferred);
+processor.run(new TypeormDatabase(), async (ctx) => {
+  const rewards = await getRewards(ctx);
+  await ctx.store.insert(rewards);
 });
 
-processor.addEventHandler("assets.Issued", async (ctx: EventHandlerContext) => {
-  const event = new AssetsIssuedEvent(ctx).asV1201;
+type Item = BatchProcessorItem<typeof processor>;
+type Ctx = BatchContext<Store, Item>;
 
-  const transferred = new Transfer();
-  transferred.id = ctx.event.id;
-  transferred.assetId = event.assetId.toString();
-  transferred.to = ctx.event.params[1].value as string;
-  transferred.from = "";
-  transferred.balance = event.totalSupply;
-  transferred.status = AssetStatus.ISSUED;
+async function getRewards(ctx: Ctx): Promise<Reward[]> {
+  const rewards: Reward[] = []
+  for (const block of ctx.blocks) {
+    for (const item of block.items) {
+      if (item.name === "ParachainStaking.Rewarded") {
 
-  await ctx.store.save(transferred);
-});
+        const event = new ParachainStakingRewardedEvent(ctx, item.event);
+        let balance;
+        let account: string;
 
-processor.addEventHandler("assets.Burned", async (ctx: EventHandlerContext) => {
-  const event = new AssetsBurnedEvent(ctx).asV1201;
+        if (event.isV900){
+          account = toHex(event.asV900[0]);
+          balance = event.asV900[1];
+        } else {
+          account = toHex(event.asV1300.account);
+          balance = event.asV1300.rewards;
+        }
 
-  const transferred = new Transfer();
-  transferred.id = ctx.event.id;
-  transferred.assetId = event.assetId.toString();
-  transferred.balance =  event.balance;
-  transferred.from = ctx.event.params[1].value as string;
-  transferred.to = "";
-  transferred.status = AssetStatus.BURNED;
+        const [blockNo, eventIdx] = item.event.id.split('-');
+        const reward = new Reward();
 
-  await ctx.store.save(transferred);
-});
+        let index = parseInt(eventIdx, 10).toString();
+        if (index.length == 1) {
+          index = `00${index}`;
+        } else if (index.length == 2) {
+          index = `0${index}`
+        }
+        
+        reward.id = `${parseInt(blockNo, 10)}-${index}`
+        reward.account = account;
+        reward.balance = balance;
+        reward.timestamp = BigInt(block.header.timestamp);
+        reward.dateMonth = (new Date(block.header.timestamp).getUTCMonth() + 1).toString() + "/" + new Date(block.header.timestamp).getUTCDate().toString();
 
-processor.run();
+        rewards.push(reward);
+      }
+    }
+  }
+  return rewards;
+}
